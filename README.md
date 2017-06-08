@@ -1,6 +1,11 @@
 # Dapperdox dockerized
 
-[Dapperdox](http://dapperdox.io/) is OpenAPI (formerly known as Swagger) document generator. This is source for its Docker image.
+[Dapperdox](http://dapperdox.io/) is beautiful, integrated, OpenAPI (Swagger) documentation generator
+. This is source for its Dockerized image.
+
+## Versions
+
+I support only latest Dapperdox version (currently 1.1.1). It is published under both `bircow/dapperdox:latest` and `bircow/dapperdox:1.1.1`.
 
 ## About Dapperdox
 
@@ -13,37 +18,73 @@ Dapperdox is tool for documenting APIs. Every API documentation can contain
 
 Dapperdox combines both into single documentation website.
 
-Guides, themes and overlays are by default collectively called "assets". Directory with `swagger.json` specification is called "specdir".
+Guides, themes and overlays are by default collectively called _"assets"_. Directory with `swagger.json` specification is called _"specdir"_.
 
-## Dapperdox sources organization
+## Recommended Dapperdox project organization and running
 
-By default image expects the following Dapperdox source file system organization:
+Default Dapperdox image configuration expects the following Dapperdox source file system organization:
 
     my_docs/
         assets/
             ...
         specs/
-            swagger.yaml
+            swagger.yaml or swagger.json
             
-Organization of assets dir is described in [authoring contepts](http://dapperdox.io/docs/author-concepts)
+        .gitignore
+        Dockerfile
 
-## Convert swagger.yaml to swagger.json
+Organization of assets dir is described in [authoring contepts](http://dapperdox.io/docs/author-concepts).
+            
+Most people usually author Swagger in YAML. Unfortunately Dapperdox supports only Swagger specification in JSON format. Fortunately Dapperdox image contains utility script that can converts `swagger.yaml` to `swagger.json` before running Dapperdox. If you version of project, create `.gitignore` to prevent adding automatically created `swagger.json`:
 
-Dapperdox can read only OpenAPI spec in JSON (`swagger.json`) but most people prefer YAML (`swagger.yaml`) which is easier for humans.
+    # .gitignore:
+    swagger.json
+
+Recommended way how to run project is create your own Docker image containing assets and specs that derive from `bircow/dapperdox`. Start with `Dockerfile` in your root with these few lines:
+
+    FROM bircow/dapperdox:1.1.1
+    
+    # Customize your assets or specs dir names
+    COPY assets/ $ASSETS_DIR
+    COPY specs/ $SPEC_DIR
+
+    # If you write in YAML convert swagger.yaml to JSON
+    RUN yaml_to_json.py $SPEC_DIR
+    
+    # Custom configuration comes here
+    # ENV THEME my_own_theme
+    
+    # Launch Dapperdox on 0.0.0.0:3123
+    CMD ["go-wrapper", "run"]
  
-This image contains Python script to convert YAML to JSON that convert `swagger.json` to `swagger.yaml` in your specdir. To call it, execute command similar to this:
+Build your image
+
+    $ docker build -t my_docs .
+    
+To run, choose network port and map project files to `/dapperdox` in container. For example:
+
+    $ docker run --rm --name my_docs \
+            -p 3123:3123
+            -v ~/path/to/my_docs:/dapperdox \
+            my_docs
+            
+Open http://localhost:3123 in your browser and enjoy!
+
+## Running from bircow/dapperdox Docker image manually
+
+Alternative to above method is running YAML to JSON and Dapperdox manually from `bircow/dapperdox` image.  
+
+If you author Swagger file in YAML, execute the command similar to this to convert `swagger.yaml` to `swagger.json`:
 
     $ docker run --rm --name yaml_to_json.py \
-            -v ~/path/to/my/specdir:/dapperdox/specs \
+            -v ~/path/to/my_docs/specs:/dapperdox/specs \
             bircow/dapperdox \
             yaml_to_json.py /dapperdox/specs
 
 Where with `-v` you map your specdir with `swagger.yaml` to `/dapperdox/specs` inside container and pass this directory to the script. 
 
-Script will override `swagger.json` if it already exists!
+For the example above, the script will create (or override) `~/path/to/my_docs/specs/swagger.json`.
 
-## Running
- 
 To run Dapperdox website from this image you must:
 
 * choose host machine port - Dapperdox runs on 3123 and it's best to use the same on host
@@ -54,21 +95,27 @@ In words of commandline e.g.:
 
     $ docker run --rm --name developer-docs \
             -p 3123:3123 \
-            -v ~/git/developer-docs/:/dapperdox \
+            -v ~/path/to/my_docs:/dapperdox \
             bircow/dapperdox
 
 Then go to http://localhost:3123 in your web browser and enjoy!
 
-## Configuration
+### Configuration
 
 By default specdir is set to `/dapperdox/specs` and assets to `/dapperdox/assets`. If you organize your Dapperdox sources to contain subfolders `specs` and `assets`, as recommended above, you don't have to modify these settings.
 
 You can configure Dapperdox running inside container via environment variables. Equivalent variable names for commandline options is found in [Dapperdox configuration guide](http://dapperdox.io/docs/configuration-guide).
 
-To override or change configuration, for example to change a theme, set environment variable `THEME` with `-e`:
+To override or change configuration, for example to change a theme, set environment variable `THEME` with ENV in your derived Dockerfile:
+ 
+    ...
+    ENV THEME my_theme
+    ...
+
+or, if running manually, with with `-e` parameter:
 
     $ docker run --rm --name developer-docs \
             -p 3123:3123 \
-            -v ~/git/developer-docs/:/dapperdox \
+            -v ~/path/to/my_docs:/dapperdox \
             -e "THEME=my_theme" \
             bircow/dapperdox
