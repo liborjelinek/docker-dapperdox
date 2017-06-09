@@ -28,17 +28,12 @@ Default Dapperdox image configuration expects the following Dapperdox source fil
         assets/
             ...
         specs/
-            swagger.yaml or swagger.json
-            
-        .gitignore
+            swagger.yaml
         Dockerfile
 
 Organization of assets dir is described in [authoring contepts](http://dapperdox.io/docs/author-concepts).
             
-Most people usually author Swagger in YAML. Unfortunately Dapperdox supports only Swagger specification in JSON format. Fortunately Dapperdox image contains utility script that can converts `swagger.yaml` to `swagger.json` before running Dapperdox. If you version of project, create `.gitignore` to prevent adding automatically created `swagger.json`:
-
-    # .gitignore:
-    swagger.json
+Most people usually author Swagger in YAML. Unfortunately Dapperdox supports only Swagger specification in JSON format. Fortunately Dapperdox image contains utility script that can converts `swagger.yaml` to `swagger.json` before running Dapperdox.
 
 Recommended way how to run project is create your own Docker image containing assets and specs that derive from `bircow/dapperdox`. Start with `Dockerfile` in your root with these few lines:
 
@@ -61,11 +56,10 @@ Build your image
 
     $ docker build -t my_docs .
     
-To run, choose network port and map project files to `/dapperdox` in container. For example:
+To run, choose only free network port on your computer mapped to 3123 in container. Best is to use Dapperdox default port 3123. For example:
 
     $ docker run --rm --name my_docs \
             -p 3123:3123
-            -v ~/path/to/my_docs:/dapperdox \
             my_docs
             
 Open http://localhost:3123 in your browser and enjoy!
